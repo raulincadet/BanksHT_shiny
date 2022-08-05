@@ -1,0 +1,245 @@
+---
+title: "Haitian Banking System"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: rows
+    vertical_layout: fill
+    
+    
+runtime: shiny
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(shiny)
+library(ggplot2)
+library(dplyr)
+library(dygraphs)
+#df=read.csv("C:/Users/Diaraye/Documents/Raul/GitHub/BanksHT/BalanceSheet_withoutDuplicates.csv")
+#write.csv(df,"balancesheet.csv",row.names = F)
+df=read.csv("balancesheet.csv")
+#df_bks=df[,c("BNC","BPH" ,"BUH" ,"CAPITALBK" ,"SOGEBK","UNIBNK","SOGEBL","CBNA",  "SCOTIA","BICH" ,"SOCABK","PROMOBK","SOCABL" ,"BHD..","BHD")]
+df$Total1=rowSums(df[,c("BNC","BPH" ,"BUH" ,"CAPITALBK" ,"SOGEBK","UNIBNK","SOGEBL","CBNA",  "SCOTIA","BICH" ,"SOCABK","PROMOBK","SOCABL" ,"BHD..","BHD")],na.rm = T)
+#df_bks$Date=df$Date;df_bks$Indicators=df$Indicators
+##############################################
+# verify if the central bank total is the same as mine
+table(abs(df$TOTAL-df$Total)==0)
+table(abs(df$TOTAL-df$Total)<=0.000001) # they are significantly identical
+table(abs(df$TOTAL-df$Total)>=0.000001) # they are significantly identical
+#############################################
+
+#unique(df$Parts2_en)
+#c("Liquid asset","Non-liquid asset","Deposit","Demand bonds" ,"Term bonds",   "Other liabilities")
+ 
+#View(do.call(cbind,list(fvariable1("Asset"),fvariable1("Liability"))) )
+##################################3
+fvariables_xts<-function(){
+  fvariable1<-function(filter){
+    dat=df%>%
+      select(Date,Parts1_en,TOTAL)%>%group_by(Parts1_en,Date,)%>%
+        summarise(Total=sum(TOTAL,na.rm = T))%>%
+        filter(Parts1_en==filter)%>%data.frame()
+  
+    return(dat$Total
+     # xts::xts(dat$Total,order.by = as.Date(dat$Date))
+      
+    )
+  }
+###
+  
+  fvariable2<-function(filter){
+    dat=df%>%
+      select(Date,Parts2_en,TOTAL)%>%group_by(Parts2_en,Date,)%>%
+        summarise(Total=sum(TOTAL,na.rm = T))%>%
+        filter(Parts2_en==filter)%>%data.frame()
+  
+    return(dat$Total
+      #xts::xts(dat$Total,order.by = as.Date(dat$Date))
+      
+    )
+  }
+##
+  lparts1=unique(df$Parts1_en)
+  listXTS_parts1=NULL
+  for (i in lparts1) {
+    listXTS_parts1[[i]]=fvariable1(filter=i)
+  }
+  ######
+  lparts2=c("Liquid asset","Non-liquid asset","Deposit","Demand bonds" ,"Term bonds",   "Other liabilities")#unique(df$Parts2_en)
+  listXTS_parts2=NULL
+  for (i in lparts2) {
+    listXTS_parts2[[i]]=fvariable2(filter=i)
+  }
+  #####
+  mergeList<-function(x,y){
+  keys <- unique(c(names(x), names(y)))
+  setNames(mapply(c, x[keys], y[keys]), keys)
+  }
+  lu=mergeList(listXTS_parts1,listXTS_parts2)
+  colnames(lu)=c(lparts1,lparts2)
+  col_lu=colnames(lu)
+  lu=cbind.data.frame(lu)
+  dates=sort(unique(df$Date))
+  fvar_xts<-function(x){
+    y=xts::to.quarterly(xts::xts(x,order.by = as.Date(dates)))[,4]
+    y=xts::xts(x,order.by = as.Date(dates))
+    names(y)=names(x)
+    return(y
+      #xts::to.quarterly(xts::xts(x,order.by = as.Date(dates)))[,4]
+    )
+  }
+  zo=NULL  
+  for (i in 1:length(col_lu)) {
+    
+      zo[[i]]=fvar_xts(lu[,col_lu[i]])/1000000 # in thousand HTG
+    
+  }
+  names(zo)=col_lu  
+  return(zo)
+}
+
+df_variables=do.call(cbind,fvariables_xts())
+indicators_names<-names(df_variables)
+#####
+#################
+dates<-as.Date(unique(df$Date))
+names(dates)<-as.yearmon(as.Date(unique(df$Date)))
+
+###3
+```
+
+
+
+Sidebar {.sidebar data-width=200}
+-------------------------------------
+
+```{r}
+selectInput("indicators", label = "Indicators in HTG",
+            choices = indicators_names, selected = indicators_names[2])
+```
+
+**Compare Indicators**
+
+```{r}
+selectInput("variable1", label = "Variable 1",
+            choices = indicators_names, selected = indicators_names[2])
+selectInput("variable2", label = "Variable 2",
+            choices = indicators_names, selected = indicators_names[2])
+```
+
+
+```{r}
+selectInput("dates_value",label = "Date",
+            choices = dates,selected=dates[1])
+             #min = (min(dates)),max = quarters(max(dates)) , value =max(dates),step = 1)
+
+```
+Row
+------------------------
+### Equity on Asset
+
+```{r}
+renderValueBox(
+   
+  valueBox(paste(round(as.numeric(df_variables$Equity[input$dates_value]/df_variables$Asset[input$dates_value]),digits = 3)*100,"%"),color = "green", icon = "fa-comments")
+  
+)
+```
+
+### Loan on Asset
+
+```{r}
+renderValueBox(
+   
+  valueBox(paste(round(as.numeric(df_variables$Liquid.asset[input$dates_value]/df_variables$Asset[input$dates_value]),digits = 3)*100,"%"),color="orangered", icon = "fa-comments")
+  
+)
+
+```
+
+### Loan on Asset
+
+```{r}
+renderValueBox(
+   
+  valueBox(paste(round(as.numeric(df_variables$Loan.portfolio[input$dates_value]/df_variables$Asset[input$dates_value]),digits = 3)*100,"%"),color="blue", icon = "fa-comments")
+  
+)
+
+```
+
+### Deposit on Asset
+
+```{r}
+renderValueBox(
+   
+  valueBox(paste(round(as.numeric(df_variables$Deposit[input$dates_value]/df_variables$Asset[input$dates_value]),digits = 3)*100,"%"),color="brown", icon = "fa-comments")
+  
+)
+
+```
+
+
+
+
+
+
+Row {data-width=350}
+-----------------------------------------------------------------------
+
+
+### Chart 1
+```{r}
+renderDygraph(  
+  dygraph(df_variables[,input$indicators],main=input$indicators)%>%
+    dyOptions(colors="blue")%>%
+    dyRangeSelector()%>%
+    dyOptions(fillGraph = T,colors=c("blue","green"))
+
+)
+
+
+```
+
+### Chart 3 - Comparison of indicators
+
+```{r}
+renderPlot(
+  df_variables%>%
+  ggplot(aes(x = get(input$variable1), y = get(input$variable2)))+
+ #geom_point(aes(color = get(input$Groups)),size=5)+#
+  geom_point(aes(color = "red"),size=2)+#
+  geom_smooth(method='lm',se=F,size=1)+
+  xlab(input$variable1)+ylab(input$variable2)+
+  ggtitle(paste("Relation between",input$variable2,"and",input$variable1))+
+   
+  theme_classic()+
+   theme(legend.position = "none",legend.title = element_blank())
+)
+```
+
+Row {data-width=350}
+-----------------------------------------------------------------------
+
+### Chart 2
+
+```{r}
+renderDygraph(
+  dygraph(df_variables[,input$indicators]/df_variables$Asset,
+          main=paste("Ratio of ",input$indicators,"on asset"))%>%
+    dyOptions(colors="blue")%>%
+    dyRangeSelector()#%>%
+    #dyOptions(fillGraph = T,colors=c("blue","green"))
+  
+)
+
+```
+
+
+### Chart 4
+
+```{r}
+
+```
+
+

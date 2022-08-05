@@ -1,0 +1,27 @@
+{
+    "id": "54EFBFDA",
+    "path": "~/Raul/GitHub/BanksHT_shiny/BankingHT/app.R",
+    "project_path": "BankingHT/app.R",
+    "type": "r_source",
+    "hash": "0",
+    "contents": "",
+    "dirty": false,
+    "created": 1659626410220.0,
+    "source_on_save": false,
+    "relative_order": 1,
+    "properties": {
+        "source_window_id": "",
+        "Source": "Source",
+        "notebook_format": "html_document",
+        "cursorPosition": "5,1",
+        "scrollLine": "0"
+    },
+    "folds": "",
+    "lastKnownWriteTime": 1659626458,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1659626458187,
+    "read_only": false,
+    "read_only_alternatives": []
+}
