@@ -103,7 +103,7 @@ indicators_names<-names(df_variables)
 #####
 #################
 dates<-as.Date(unique(df$Date))
-names(dates)<-as.yearmon(as.Date(unique(df$Date)))
+names(dates)<-as.yearqtr(as.Date(unique(df$Date)))#as.yearmon(as.Date(unique(df$Date)))
 
 ###3
 ```
@@ -113,12 +113,24 @@ names(dates)<-as.yearmon(as.Date(unique(df$Date)))
 Sidebar {.sidebar data-width=200}
 -------------------------------------
 
+Select a quarterly to display the key indicators of the balance sheet.
+
+
+```{r}
+selectInput("dates_value",label = "Date",
+            choices = dates,selected=dates[1])
+             #min = (min(dates)),max = quarters(max(dates)) , value =max(dates),step = 1)
+
+```
+
+Select an indicator to display charts 1 and 2
+
 ```{r}
 selectInput("indicators", label = "Indicators in HTG",
             choices = indicators_names, selected = indicators_names[2])
 ```
 
-**Compare Indicators**
+Compare two indicators (chart 3)
 
 ```{r}
 selectInput("variable1", label = "Variable 1",
@@ -128,12 +140,7 @@ selectInput("variable2", label = "Variable 2",
 ```
 
 
-```{r}
-selectInput("dates_value",label = "Date",
-            choices = dates,selected=dates[1])
-             #min = (min(dates)),max = quarters(max(dates)) , value =max(dates),step = 1)
 
-```
 Row
 ------------------------
 ### Equity on Asset
