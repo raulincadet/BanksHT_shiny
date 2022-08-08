@@ -1,0 +1,13 @@
+name: BankingHT_dashboard
+title: BankingHT_dashboard
+username:
+account: cage
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 6750186
+bundleId: 6177543
+url: https://cage.shinyapps.io/BankingHT_dashboard/
+when: 1659915028.13494
+lastSyncTime: 1659915028.13494
+asMultiple: FALSE
+asStatic: FALSE
