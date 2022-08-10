@@ -1,9 +1,22 @@
 ---
 title: "Haitian Banking System"
+author: "Raulin L. Cadet"
 output: 
   flexdashboard::flex_dashboard:
     orientation: columns
     vertical_layout: fill
+    theme: 
+      bg: "white"
+      fg: "black" 
+      primary: "white"
+      navbar-bg: "navy"
+      base_font: !expr bslib::font_google("Prompt")
+      code_font: !expr bslib::font_google("JetBrains Mono")
+    
+    social: [ "twitter", "facebook", "linkedin" ]
+    navbar:
+      - { title: "Code", href: "https://github.com/raulincadet/BanksHT_shiny", align: right, icon: fa-github}
+     
     
     
 runtime: shiny
@@ -33,7 +46,7 @@ gtheme<-function(...){
 ##############################
 #df=read.csv("C:/Users/Diaraye/Documents/Raul/GitHub/BanksHT/BalanceSheet_withoutDuplicates.csv")
 #write.csv(df,"balancesheet.csv",row.names = F)
-df=read.csv("balancesheet.csv")
+df=read.csv("BalanceSheet_withoutDuplicates.csv")
 #### remove '-' in names of parts
 df$Parts1_en<-gsub('[-]',' ',df$Parts1_en)
 df$Parts2_en<-gsub('[-]',' ',df$Parts2_en)
@@ -58,12 +71,12 @@ table(abs(df$TOTAL-df$Total)>=0.000001) # they are significantly identical
 fvariables_xts<-function(){
   fvariable1<-function(filter){
     dat=df%>%
-      select(Date,Parts1_en,TOTAL)%>%group_by(Parts1_en,Date,)%>%
-        summarise(Total=sum(TOTAL,na.rm = T))%>%
+      select(Date,Parts1_en,Total1)%>%group_by(Parts1_en,Date,)%>%
+        summarise(Total1=sum(Total1,na.rm = T))%>%
         filter(Parts1_en==filter)%>%data.frame()
   
-    return(dat$Total
-     # xts::xts(dat$Total,order.by = as.Date(dat$Date))
+    return(dat$Total1
+     # xts::xts(dat$Total1,order.by = as.Date(dat$Date))
       
     )
   }
@@ -71,12 +84,12 @@ fvariables_xts<-function(){
   
   fvariable2<-function(filter){
     dat=df%>%
-      select(Date,Parts2_en,TOTAL)%>%group_by(Parts2_en,Date,)%>%
-        summarise(Total=sum(TOTAL,na.rm = T))%>%
+      select(Date,Parts2_en,Total1)%>%group_by(Parts2_en,Date,)%>%
+        summarise(Total1=sum(Total1,na.rm = T))%>%
         filter(Parts2_en==filter)%>%data.frame()
   
-    return(dat$Total
-      #xts::xts(dat$Total,order.by = as.Date(dat$Date))
+    return(dat$Total1
+      #xts::xts(dat$Total1,order.by = as.Date(dat$Date))
       
     )
   }
@@ -144,10 +157,10 @@ dates=sort(dates,decreasing = T)
 
 
 
-Sidebar {.sidebar data-width=350}
+Preamble {.sidebar data-width=350}
 -------------------------------------
 
-*This dashboard is a project of Raulin Cadet to display financial data visualization related to the Haitian banking system. It is not intended for decision-making. Although data used are provided on the website of the central bank, the author has cleaned them with Python before importing them in R to realize this dashboard (with shiny apps). The author has done his best to provide accurate data visualization in this dashboard. However, he gives no warranty and accepts no responsibility or liability for the accuracy or completeness of the information provided on the dashboard.*
+This dashboard is a draft version of a personal project to display financial data visualization related to the Haitian banking system. It is not intended for decision-making. The author gives no warranty and accepts no responsibility or liability for the information provided on the dashboard.
 
 Select and indicator (charts 1 and 2)
 
@@ -164,8 +177,6 @@ selectInput("variable1", label = "Variable 1",
 selectInput("variable2", label = "Variable 2",
             choices = indicators_names, selected = indicators_names[5])
 ```
-
-
 
 
 
@@ -247,11 +258,11 @@ findicators<-function(x){ # x is an indicator
   for(i in banks){
     if(x %in% unique(df$Parts1_en)){
       y[[i]]=df%>%filter(Parts1_en==x)%>%group_by(Date)%>%
-        summarise(Total=sum(get(i)))  # total of the indicator by date for each bank
+        summarise(Total1=sum(get(i)))  # Total1 of the indicator by date for each bank
       bks[[i]]=rep(i,length(y[[i]]))
     }else{
       y[[i]]=df%>%filter(Parts2_en==x)%>%group_by(Date)%>%
-        summarise(Total=sum(get(i)))
+        summarise(Total1=sum(get(i)))
       bks[[i]]=rep(i,length(y[[i]]))
     }
   }
@@ -262,12 +273,12 @@ findicators<-function(x){ # x is an indicator
 }
 renderPlot(
   findicators(input$indicators)%>%filter(Date==input$dates_value)%>%na.omit()%>%
-  mutate(Banks = fct_reorder(Banks, Total)) %>%
-  ggplot(aes(x=Banks,y=Total/1000))+
+  mutate(Banks = fct_reorder(Banks, Total1)) %>%
+  ggplot(aes(x=Banks,y=Total1/1000))+
   ylab("Thousands of HTG")+
   geom_bar(stat = "identity",fill="orangered")+
   coord_flip()+
-  geom_text(aes(label=round(Total/1000)),hjust=-0.2)+
+  geom_text(aes(label=round(Total1/1000)),hjust=-0.2)+
   theme(text = element_text(size=10)) +
   gtheme()
   
@@ -279,7 +290,7 @@ renderPlot(
   
 # colnames(df)
 #banks<-c("BNC","BPH" ,"BUH","CAPITALBK","SOGEBK","UNIBNK",
- #        "SOGEBL","CBNA","TOTAL","SCOTIA","BICH","SOCABK",
+ #        "SOGEBL","CBNA","Total1","SCOTIA","BICH","SOCABK",
   #       "PROMOBK","SOCABL","BHD..","BHD")
 ```
 
@@ -287,7 +298,7 @@ renderPlot(
 Column {data-width=50}
 ------------------------------------
 
-Select a quarterly to display the key indicators of the balance sheet.
+Select a quarterly to display the key indicators of the balance sheet for the whole system.
 
 
 ```{r}
@@ -352,4 +363,6 @@ renderValueBox(
 )
 
 ```
+
+
 
