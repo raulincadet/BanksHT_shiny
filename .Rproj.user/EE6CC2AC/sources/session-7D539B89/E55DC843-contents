@@ -46,23 +46,23 @@ gtheme<-function(...){
 ##############################
 #df=read.csv("C:/Users/Diaraye/Documents/Raul/GitHub/BanksHT/BalanceSheet_withoutDuplicates.csv")
 #write.csv(df,"balancesheet.csv",row.names = F)
-df=read.csv("BalanceSheet_withoutDuplicates.csv")
+df_balance=read.csv("BalanceSheet_withoutDuplicates.csv")
 #### remove '-' in names of parts
-df$Parts1_en<-gsub('[-]',' ',df$Parts1_en)
-df$Parts2_en<-gsub('[-]',' ',df$Parts2_en)
+df_balance$Parts1_en<-gsub('[-]',' ',df_balance$Parts1_en)
+df_balance$Parts2_en<-gsub('[-]',' ',df_balance$Parts2_en)
 ### remove spaces before and after string
-df$Parts1_en<-stringr::str_trim(df$Parts1_en,side='both')
-df$Parts2_en<-stringr::str_trim(df$Parts2_en,side='both')
-#df_bks=df[,c("BNC","BPH" ,"BUH" ,"CAPITALBK" ,"SOGEBK","UNIBNK","SOGEBL","CBNA",  "SCOTIA","BICH" ,"SOCABK","PROMOBK","SOCABL" ,"BHD..","BHD")]
+df_balance$Parts1_en<-stringr::str_trim(df_balance$Parts1_en,side='both')
+df_balance$Parts2_en<-stringr::str_trim(df_balance$Parts2_en,side='both')
+#df_balance_bks=df_balance[,c("BNC","BPH" ,"BUH" ,"CAPITALBK" ,"SOGEBK","UNIBNK","SOGEBL","CBNA",  "SCOTIA","BICH" ,"SOCABK","PROMOBK","SOCABL" ,"BHD..","BHD")]
 
 # To compare the result of total calculated and the one provided by the central bank.
-df$Total1=rowSums(df[,c("BNC","BPH" ,"BUH" ,"CAPITALBK" ,"SOGEBK","UNIBNK","SOGEBL","CBNA",  "SCOTIA","BICH" ,"SOCABK","PROMOBK","SOCABL" ,"BHD..","BHD")],na.rm = T)
-#df_bks$Date=df$Date;df_bks$Indicators=df$Indicators
+df_balance$Total1=rowSums(df_balance[,c("BNC","BPH" ,"BUH" ,"CAPITALBK" ,"SOGEBK","UNIBNK","SOGEBL","CBNA",  "SCOTIA","BICH" ,"SOCABK","PROMOBK","SOCABL" ,"BHD..","BHD")],na.rm = T)
+#df_balance_bks$Date=df_balance$Date;df_balance_bks$Indicators=df_balance$Indicators
 ##############################################
 # verify if the central bank total is the same as mine
-table(abs(df$TOTAL-df$Total)==0)
-table(abs(df$TOTAL-df$Total)<=0.000001) # they are significantly identical
-table(abs(df$TOTAL-df$Total)>=0.000001) # they are significantly identical
+table(abs(df_balance$TOTAL-df_balance$Total)==0)
+table(abs(df_balance$TOTAL-df_balance$Total)<=0.000001) # they are significantly identical
+table(abs(df_balance$TOTAL-df_balance$Total)>=0.000001) # they are significantly identical
 #############################################
 
 #unique(df$Parts2_en)
@@ -79,9 +79,22 @@ df_income$Total1=rowSums(df_income[,c("BNC","BPH" ,"BUH" ,"CAPITALBK" ,"SOGEBK",
 table(abs(df_income$TOTAL-df_income$Total)==0) # there is some difference
 table(abs(df_income$TOTAL-df_income$Total)<=0.000001) # they are slightly identical
 table(abs(df_income$TOTAL-df_income$Total)>=0.000001) # they are sightly identical
-#############################################
 
-################################
+#######################################
+#####  MERGING DATA FRAMES      #######
+#######################################
+
+# add a column indicating the report where provide data to track indicators sources when the data frame are merged
+df["ReportSource"]= rep("BalanceSheet",dim(df)[1])
+df_income["ReportSource"]= rep("IncomeStatement",dim(df_income)[1])
+
+df=rbind.data.frame(df_balance,df_income)# merging
+# dim(df_balance):2789 23
+# dim(df_income): 1584 23
+# row of new df should be: 4373
+
+#######################################
+
 fvariables_xts<-function(){
   fvariable1<-function(filter){
     dat=df%>%
@@ -215,173 +228,4 @@ renderDygraph(
 
 
 ```
-
-### Chart 3 - Comparison of two indicators
-
-```{r}
-renderPlot(
-  df_variables%>%
-  ggplot(aes(x = get(input$variable1), y = get(input$variable2)))+
- #geom_point(aes(color = get(input$Groups)),size=5)+#
-  geom_point(color = "orangered",size=3.5)+#
-  geom_smooth(method='lm',se=F,size=1)+
-  xlab(input$variable1)+ylab(input$variable2)+
-  ggtitle(paste("Relation between",input$variable2,"and",input$variable1))+
-   
-  theme_classic()+
-   theme(legend.position = "none",legend.title = element_blank())
-)
-```
-
-Column {data-width=375}
------------------------------------------------------------------------
-
-### Chart 2
-
-```{r}
-renderDygraph(
-  dygraph(df_variables[,input$indicators]/df_variables$Asset,
-          main=paste("Ratio of ",input$indicators,"on Asset"),
-          ylab="Purcentages",xlab="Dates")%>%
-    dyOptions(colors="blue")%>%
-    dyHighlight(highlightCircleSize = 5, 
-              highlightSeriesBackgroundAlpha = 0.2,
-              hideOnMouseOut = FALSE)%>%
-    dyRangeSelector()#%>%
-    #dyOptions(fillGraph = T,colors=c("blue","green"))
-  
-)
-
-```
-
-
-### Chart 4 - Comparison of a selected indicators
-
-```{r}
-findicators<-function(x){ # x is an indicator
-  x=gsub('[.]',' ',x)
-  banks<-c("BNC","BPH" ,"BUH","CAPITALBK","SOGEBK","UNIBNK",
-         "SOGEBL","CBNA","SCOTIA","BICH","SOCABK",
-         "PROMOBK","SOCABL","BHD..","BHD")
-  ######
-  # remove - in Parts1_en and Parts2_en
-  #df$Parts1_en=gsub('[-]'," ",df$Parts1_en)
-  #df$Parts2_en=gsub('[-]'," ",df$Parts2_en)
-  ######
-  y=NULL;bks=NULL
-  for(i in banks){
-    if(x %in% unique(df$Parts1_en)){
-      y[[i]]=df%>%filter(Parts1_en==x)%>%group_by(Date)%>%
-        summarise(Total1=sum(get(i)))  # Total1 of the indicator by date for each bank
-      bks[[i]]=rep(i,length(y[[i]]))
-    }else{
-      y[[i]]=df%>%filter(Parts2_en==x)%>%group_by(Date)%>%
-        summarise(Total1=sum(get(i)))
-      bks[[i]]=rep(i,length(y[[i]]))
-    }
-  }
-  dfi=do.call(rbind,y)
-  dfi$Banks=gsub('[0-9.]+', '',rownames(dfi)) # to remove digits and 
-  #"." from rownames to identify banks
-  dfi
-}
-renderPlot(
-  findicators(input$indicators)%>%filter(Date==input$dates_value)%>%na.omit()%>%
-  mutate(Banks = fct_reorder(Banks, Total1)) %>%
-  ggplot(aes(x=Banks,y=Total1/1000))+
-  ylab("Thousands of HTG")+
-  geom_bar(stat = "identity",fill="orangered")+
-  coord_flip()+
-  geom_text(aes(label=round(Total1/1000)),hjust=-0.1)+
-  theme(text = element_text(size=10)) +
-  ggtitle(paste(input$indicators, "by bank",sep=" "),
-          subtitle = paste("quarterly ended on",substr(input$dates_value,1,7),sep =" "))+
-  #labs(title=paste(input$indicators, "by bank - quarterly ended on",substr(input$dates_value,1,7),sep =" "))+
-  #theme(plot.margin = unit(c(1,1,1,1), "cm"))
-  
-  gtheme()
-  
-)
-
-
-#View(findicators("Asset"))
-
-  
-# colnames(df)
-#banks<-c("BNC","BPH" ,"BUH","CAPITALBK","SOGEBK","UNIBNK",
- #        "SOGEBL","CBNA","Total1","SCOTIA","BICH","SOCABK",
-  #       "PROMOBK","SOCABL","BHD..","BHD")
-```
-
-
-Column {data-width=50}
-------------------------------------
-
-Select a quarterly to display the key indicators of the balance sheet for the whole system.
-
-
-```{r}
-selectInput("dates_value",label = "Date",
-            choices = dates,selected=dates[1])
-             #min = (min(dates)),max = quarters(max(dates)) , value =max(dates),step = 1)
-
-```
-
-### Equity on Asset
-
-```{r}
-renderValueBox(
-   
-  valueBox(paste(round(as.numeric(df_variables$Equity[input$dates_value]/df_variables$Asset[input$dates_value]),digits = 3)*100,"%"),color = "green", icon = "fa-chart-pie")
-  
-)
-```
-
-### Liquidity on Asset
-
-```{r}
-renderValueBox(
-   
-  valueBox(paste(round(as.numeric(df_variables$Liquid.asset[input$dates_value]/df_variables$Asset[input$dates_value]),digits = 3)*100,"%"),color="blue", icon = "fa-usd")
-  
-)
-
-```
-
-### Loan on Asset
-
-```{r}
-renderValueBox(
-   
-  valueBox(paste(round(as.numeric(df_variables$Loan.portfolio[input$dates_value]/df_variables$Asset[input$dates_value]),digits = 3)*100,"%"),color="orange", icon = "fa-credit-card")
-  
-)
-
-```
-
-### Deposit on Asset
-
-```{r}
-
-renderValueBox(
-   
-  valueBox(paste(round(as.numeric(df_variables$Deposit[input$dates_value]/df_variables$Asset[input$dates_value]),digits = 3)*100,"%"),color="purple", icon = "fa-piggy-bank")
-  
-)
-
-```
-
-### Deposit in USD on Asset
-
-```{r}
-
-renderValueBox(
-   
-  valueBox(paste(round(as.numeric(df_variables$Deposit.in.US.converted.in.HTG[input$dates_value]/df_variables$Asset[input$dates_value]),digits = 3)*100,"%"),color="maroon", icon = "fa-piggy-bank")
-  
-)
-
-```
-
-
 

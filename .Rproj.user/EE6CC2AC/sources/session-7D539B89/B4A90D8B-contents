@@ -44,8 +44,6 @@ gtheme<-function(...){
 }
 
 ##############################
-#df=read.csv("C:/Users/Diaraye/Documents/Raul/GitHub/BanksHT/BalanceSheet_withoutDuplicates.csv")
-#write.csv(df,"balancesheet.csv",row.names = F)
 df=read.csv("BalanceSheet_withoutDuplicates.csv")
 #### remove '-' in names of parts
 df$Parts1_en<-gsub('[-]',' ',df$Parts1_en)
@@ -65,10 +63,6 @@ table(abs(df$TOTAL-df$Total)<=0.000001) # they are significantly identical
 table(abs(df$TOTAL-df$Total)>=0.000001) # they are significantly identical
 #############################################
 
-#unique(df$Parts2_en)
-#c("Liquid asset","Non-liquid asset","Deposit","Demand bonds" ,"Term bonds",   "Other liabilities")
- 
-#View(do.call(cbind,list(fvariable1("Asset"),fvariable1("Liability"))) )
 ##################################3
 df_income=read.csv("C:/Users/Diaraye/Documents/Raul/GitHub/BanksHT/IncomeStatement_withoutDuplicates.csv")
 # To compare the result of total calculated and the one provided by the central bank.
@@ -79,9 +73,11 @@ df_income$Total1=rowSums(df_income[,c("BNC","BPH" ,"BUH" ,"CAPITALBK" ,"SOGEBK",
 table(abs(df_income$TOTAL-df_income$Total)==0) # there is some difference
 table(abs(df_income$TOTAL-df_income$Total)<=0.000001) # they are slightly identical
 table(abs(df_income$TOTAL-df_income$Total)>=0.000001) # they are sightly identical
+
+####################################
+df_employees<-read.csv("C:/Users/Diaraye/Documents/Raul/GitHub/BanksHT/BanksEmployees_withoutDuplicates.csv")
 #############################################
 
-################################
 fvariables_xts<-function(){
   fvariable1<-function(filter){
     dat=df%>%
@@ -159,9 +155,71 @@ indicNames<-function(){
   y
 }
 #indicators_names=indicNames()
-colnames(df_variables)=indicators_names
-#####
-#################
+#colnames(df_variables)=indicators_names
+########################################################################
+#### Build a data frame xts for indicators from the income statement ####
+#########################################################################
+
+df_income2<-df_income%>%
+  filter(Indicators_en!='Other')
+
+######
+
+fvariables_xts2<-function(){
+  fvariable1<-function(filter){
+    dat=df_income2%>%
+      select(Date,Indicators_en,Total1)%>%group_by(Indicators_en,Date,)%>%
+      summarise(Total1=sum(Total1,na.rm = T))%>%
+      filter(Indicators_en==filter)%>%data.frame()
+    
+    return(dat$Total1
+           # xts::xts(dat$Total1,order.by = as.Date(dat$Date))
+           
+    )
+  }
+  ###
+  
+  
+  ##
+  lparts1=unique(df_income2$Indicators_en)
+  listXTS_parts1=NULL
+  for (i in 1:length(lparts1)) {
+    listXTS_parts1[[i]]=fvariable1(filter=lparts1[i])
+  }
+  listXTS_parts1=as.data.frame(listXTS_parts1)
+  colnames(listXTS_parts1)=lparts1
+   #################33
+  dates=sort(unique(df$Date))
+  fvar_xts<-function(x){
+    y=xts::to.quarterly(xts::xts(x,order.by = as.Date(dates)))[,4]
+    y=xts::xts(x,order.by = as.Date(dates))
+    names(y)=names(x)
+    return(y
+           #xts::to.quarterly(xts::xts(x,order.by = as.Date(dates)))[,4]
+    )
+  }
+  zo=NULL  
+  for (i in 1:length(lparts1)) {
+    
+    zo[[i]]=fvar_xts(listXTS_parts1[,lparts1[i]])/1000000 # in thousand HTG
+    
+  }
+  names(zo)=colnames(listXTS_parts1)  
+  return(zo)
+  #################3
+  #return(listXTS_parts1) # return a data frame of total of each variable
+  
+}
+
+df_incomeXTS=do.call(cbind,fvariables_xts2())
+
+##########################################
+#### MERGING 
+df_variables=cbind(df_variables,df_incomeXTS)
+
+indicators_names=colnames(df_variables)
+#########################################################################
+
 dates<-as.Date(unique(df$Date))
 names(dates)<-as.yearqtr(as.Date(unique(df$Date)))#as.yearmon(as.Date(unique(df$Date)))
 dates=sort(dates,decreasing = T)
@@ -201,6 +259,8 @@ Column {data-width=350}
 
 ### Chart 1
 ```{r}
+
+
 renderDygraph(  
   dygraph(df_variables[,input$indicators],main=input$indicators,
           ylab=input$indicators,xlab="Dates")%>%
