@@ -1,0 +1,2 @@
+"0","selectInput(""indicators"", label = ""Indicators"","
+"0","            choices = indicators_names, selected = indicators_names[indicators_names==""Equity""])"

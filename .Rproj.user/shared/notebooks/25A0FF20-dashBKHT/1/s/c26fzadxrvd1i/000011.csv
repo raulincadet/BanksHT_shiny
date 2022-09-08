@@ -1,0 +1,3 @@
+"0","indicators_names=unique(df1$Indicators_en)"
+"0","banks_names=colnames(df1)[!colnames(df1)%in% c(""Indicators"",""Indicators_en"",""Date"",""Parts1_fr"",""Parts2_fr"",""Parts1_en"",""Parts2_en"")]"
+"0",""

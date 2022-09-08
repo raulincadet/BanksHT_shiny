@@ -1,0 +1,8 @@
+"0","df_inc=read.csv(""C:/Users/Diaraye/Documents/Raul/GitHub/BanksHT/IncomeStatement_withoutDuplicates.csv"")"
+"0","#sum(df_inc$BHD..,na.rm = T)   # no value in that column"
+"0","#sum(df_inc$BHD,na.rm = T)     # there are some data in that column"
+"0","df_inc<-df_inc[,colnames(df_inc)[!colnames(df_inc)%in% c(""BHD.."",""TOTAL"")]]   # removing column ""BHD.."" and column ""TOTAL"""
+"0",""
+"0","# create a column for Total values of each indicator/row. There are some errors in Total of variables in income statement in files from the central bank"
+"0","df_inc$System=rowSums(df_inc[,colnames(df_inc)[!colnames(df_inc) %in% c(""Indicators"",""Indicators_en"",""Date"",""Parts1_fr"",""Parts2_fr"",""Parts1_en"",""Parts2_en"") ]],na.rm = T)"
+"0",""

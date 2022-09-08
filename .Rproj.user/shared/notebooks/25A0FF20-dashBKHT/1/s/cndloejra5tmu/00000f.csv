@@ -1,0 +1,2 @@
+"0","selectInput(""banks"", label = ""Banks"","
+"0","            choices = banks_names, selected = banks_names[banks_names==""System""],multiple = TRUE)"

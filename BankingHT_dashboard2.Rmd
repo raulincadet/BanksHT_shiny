@@ -58,15 +58,19 @@ df$Total1=rowSums(df[,c("BNC","BPH" ,"BUH" ,"CAPITALBK" ,"SOGEBK","UNIBNK","SOGE
 #df_bks$Date=df$Date;df_bks$Indicators=df$Indicators
 ##############################################
 # verify if the central bank total is the same as mine
-table(abs(df$TOTAL-df$Total)==0)
-table(abs(df$TOTAL-df$Total)<=0.000001) # they are significantly identical
-table(abs(df$TOTAL-df$Total)>=0.000001) # they are significantly identical
+table(abs(df$TOTAL-df$Total1)==0)
+table(abs(df$TOTAL-df$Total1)<=0.000001) # they are significantly identical
+table(abs(df$TOTAL-df$Total1)>=0.000001) # they are significantly identical
 #############################################
 
 ##################################3
 df_income=read.csv("C:/Users/Diaraye/Documents/Raul/GitHub/BanksHT/IncomeStatement_withoutDuplicates.csv")
 # To compare the result of total calculated and the one provided by the central bank.
 df_income$Total1=rowSums(df_income[,c("BNC","BPH" ,"BUH" ,"CAPITALBK" ,"SOGEBK","UNIBNK","SOGEBL","CBNA",  "SCOTIA","BICH" ,"SOCABK","PROMOBK","SOCABL" ,"BHD..","BHD")],na.rm = T)
+
+# Data will be filtering by Parts2_en to realized geom_bar
+df_income$Parts1_en=df_income$Indicators_en
+df_income$Parts2_en=df_income$Indicators_en
 #df_bks$Date=df$Date;df_bks$Indicators=df$Indicators
 ##############################################
 # verify if the central bank total is the same as mine
@@ -76,8 +80,75 @@ table(abs(df_income$TOTAL-df_income$Total)>=0.000001) # they are sightly identic
 
 ####################################
 df_employees<-read.csv("C:/Users/Diaraye/Documents/Raul/GitHub/BanksHT/BanksEmployees_withoutDuplicates.csv")
-#############################################
 
+# remove spaces before and after the name of each bank
+df_employees$Banks=stringr::str_trim(df_employees$Banks,side='both')
+df_employees<-df_employees%>%filter(Banks!="PROMOBK *") # to remove data
+# related to that bank which are redundant compared to the name without asterisk.
+
+# remove duplicated rows
+df_employees<-df_employees[!duplicated(df_employees),]
+
+
+##############################################
+# arrange df_employees data frame to be structured as df and df_income
+
+df_employees%>%group_by(Date,Banks)%>%summarise(Employees=mean(Indicator,na.rm=T))%>%
+  filter(Banks=="PROMOBK")%>%ungroup()%>%summarise(sum(Employees,na.rm = T))
+######
+df_employees$Banks<-gsub("UNIBK","UNIBNK",df_employees$Banks) # to harmonized the name of this bank to be the same in all data frame.
+
+
+######
+banks_emp=na.omit(unique(df_employees['Banks']))
+banks_emp=unique(df_employees['Banks'])
+banks_emp=banks_emp[banks_emp!=''] # to remove missing values
+
+femployees<-function(){ # function to structured a new data frame of numbers
+                  # of employees to be merged with the other data frame
+
+  bks=NULL
+  do=data.frame()
+  #colnames(do)=c("Date","Indicator")
+  for (i in 1:length(banks_emp)) {
+    bks[[i]]=df_employees%>%filter(Banks==banks_emp[i])%>%select(Date,Indicator)
+    colnames(bks[[i]])=c("Date",banks_emp[i])
+  }
+  dat=bks[1]
+  for(i in 2:length(banks_emp)){
+    dat=merge(dat,bks[i])
+    
+  }
+  return(dat)
+}
+
+
+df_employees2=femployees() # new data frame of numbers of employees by bank and by date
+
+df_employees2$Total1<-rowSums(df_employees2[,banks_emp[banks_emp!="TOTAL"]],na.rm = T)
+df_employees2$Indicators=rep("Number of Employees",dim(df_employees2)[1])  
+df_employees2$Parts1_fr=rep("Nombre d'Employées",dim(df_employees2)[1])
+df_employees2$Parts2_fr=rep("Nombre d'Employées",dim(df_employees2)[1])
+df_employees2$Parts1_en=rep("Number of Employees",dim(df_employees2)[1])
+df_employees2$Parts2_en=rep("Number of Employees",dim(df_employees2)[1])
+df_employees2$Indicators_en=rep("Number of Employees",dim(df_employees2)[1])
+##############################################
+# verify if the central bank total is the same as mine
+table(abs(df_employees2$TOTAL-df_employees2$Total1)==0)
+table(abs(df_employees2$TOTAL-df_employees2$Total1)<=0.000001) # they are significantly identical
+table(abs(df_employees2$TOTAL-df_employees2$Total1)>=0.000001) # they are not identical. THere are some mistake in the central bank compilation of data
+#############
+df_employees2$TOTAL=df_employees2$Total1
+#############################################
+# To retrieve some indicators in df where we store balance sheet data, we should group rows by indicators names using Parts1_en or Parts2_en. However, it is not the case for df_income and df_employee2, where each rows is an indicator. Thus, we can merge df_income and df_employee2
+
+# to compare columns names of the two data frame
+colnames(df_employees2) [(colnames(df_employees2) %in% colnames(df_income))==F]
+# These banks are not in df_income: "UNIBK" "BIDC"  "BMH". We understand that the spelling of Unibank is different from a data frame to another
+colnames(df) # showing that in another data frame the spelling of Univbank acronym is UNIBNK. 
+#colnames(df_employees2)<-gsub("UNIBK","UNIBNK",colnames(df_employees2))
+df_incomeEmploy=merge(df_income,df_employees2,all = T)
+################################################
 fvariables_xts<-function(){
   fvariable1<-function(filter){
     dat=df%>%
@@ -136,7 +207,7 @@ fvariables_xts<-function(){
   zo=NULL  
   for (i in 1:length(col_lu)) {
     
-      zo[[i]]=fvar_xts(lu[,col_lu[i]])/1000000 # in thousand HTG
+      zo[[i]]=fvar_xts(lu[,col_lu[i]])/1000 # in thousand HTG
     
   }
   names(zo)=col_lu  
@@ -154,6 +225,9 @@ indicNames<-function(){
   }
   y
 }
+########################
+
+
 #indicators_names=indicNames()
 #colnames(df_variables)=indicators_names
 ########################################################################
@@ -189,7 +263,7 @@ fvariables_xts2<-function(){
   listXTS_parts1=as.data.frame(listXTS_parts1)
   colnames(listXTS_parts1)=lparts1
    #################33
-  dates=sort(unique(df$Date))
+  dates=sort(unique(df_income2$Date))
   fvar_xts<-function(x){
     y=xts::to.quarterly(xts::xts(x,order.by = as.Date(dates)))[,4]
     y=xts::xts(x,order.by = as.Date(dates))
@@ -201,7 +275,7 @@ fvariables_xts2<-function(){
   zo=NULL  
   for (i in 1:length(lparts1)) {
     
-    zo[[i]]=fvar_xts(listXTS_parts1[,lparts1[i]])/1000000 # in thousand HTG
+    zo[[i]]=fvar_xts(listXTS_parts1[,lparts1[i]])/1000 # in thousand HTG
     
   }
   names(zo)=colnames(listXTS_parts1)  
@@ -213,11 +287,54 @@ fvariables_xts2<-function(){
 
 df_incomeXTS=do.call(cbind,fvariables_xts2())
 
+###########################################
+### Function to build an xts time series of total of employees by
+fvariables_xts3<-function(){
+  y=df_employees%>%filter(Banks!='TOTAL')%>%group_by(Date)%>%
+    summarise(Total1=sum(Indicator,na.rm = T))
+  return(xts::xts(y$Total1,order.by = as.Date(y$Date)))
+  
+ }
+  
+  
+
+df_employeesXTS=fvariables_xts3()
+colnames(df_employeesXTS)<-"Number of employees"
+#colnames(df_employeesXTS)
 ##########################################
 #### MERGING 
-df_variables=cbind(df_variables,df_incomeXTS)
+# remove unnecessary columns in df_variables
+col_variables=unique(c(colnames(df_variables),colnames(df_incomeXTS),colnames(df_employeesXTS)))
+df_variables=merge(merge(df_variables,df_incomeXTS,by="Date"),df_employeesXTS, by="Date")
+#colnames(df_variables)=col_variables
+# select only xts variables necessary. There are some empty columns such as by and by.1 in the data frame.
+fdf_col<-function(){
+  y=NULL
+  for(i in 1:length(col_variables)){
+    y[[i]]=df_variables[col_variables]
+  }
+  return(do.call(cbine,y))
+}
 
 indicators_names=colnames(df_variables)
+indicators_names=indicators_names[indicators_names!="by"]
+indicators_names=indicators_names[indicators_names!="by.1"]
+indicators_names=indicators_names[indicators_names!="Allowance.for.bad.debts.1"]
+df_variables=df_variables[,indicators_names]
+# unnecessary indicators names to remove: they have a digit at their end
+fcolumns<-function(x){ # x is a vector of colnames or other strings
+  y=NULL
+  for(i in 1:length(x)) {
+    y[i]=gsub("[.]"," ",x[i] )
+      
+  }
+  return(y)
+}
+#fcolumns(c("Hello..4","ien","Bello.4","Viva"))
+indicators_names=fcolumns(indicators_names)
+colnames(df_variables)<-indicators_names
+colnames(df_variables)<-gsub("Net profit  loss ","Net profit (loss)",indicators_names)
+indicators_names<-colnames(df_variables)
 #########################################################################
 
 dates<-as.Date(unique(df$Date))
@@ -318,24 +435,26 @@ renderDygraph(
 ### Chart 4 - Comparison of a selected indicators
 
 ```{r}
+df_bar<-merge(df,df_incomeEmploy,all=T) # merging data related to balance sheet, income statement, noumber of employees
+
+#########################################
+#colnames(df_variables) %in% unique(df_bar$Parts1_en)
+##############################################
+#############################################
+
 findicators<-function(x){ # x is an indicator
   x=gsub('[.]',' ',x)
-  banks<-c("BNC","BPH" ,"BUH","CAPITALBK","SOGEBK","UNIBNK",
-         "SOGEBL","CBNA","SCOTIA","BICH","SOCABK",
-         "PROMOBK","SOCABL","BHD..","BHD")
-  ######
-  # remove - in Parts1_en and Parts2_en
-  #df$Parts1_en=gsub('[-]'," ",df$Parts1_en)
-  #df$Parts2_en=gsub('[-]'," ",df$Parts2_en)
-  ######
+  banks=banks_emp
+  
   y=NULL;bks=NULL
   for(i in banks){
-    if(x %in% unique(df$Parts1_en)){
-      y[[i]]=df%>%filter(Parts1_en==x)%>%group_by(Date)%>%
+    #if(x %in% unique(df_bar$Parts1_en)){
+    if(x %in% indicators_names){
+      y[[i]]=df_bar%>%filter(Parts1_en==x)%>%group_by(Date)%>%
         summarise(Total1=sum(get(i)))  # Total1 of the indicator by date for each bank
       bks[[i]]=rep(i,length(y[[i]]))
     }else{
-      y[[i]]=df%>%filter(Parts2_en==x)%>%group_by(Date)%>%
+      y[[i]]=df_bar%>%filter(Parts2_en==x)%>%group_by(Date)%>%
         summarise(Total1=sum(get(i)))
       bks[[i]]=rep(i,length(y[[i]]))
     }
@@ -348,11 +467,11 @@ findicators<-function(x){ # x is an indicator
 renderPlot(
   findicators(input$indicators)%>%filter(Date==input$dates_value)%>%na.omit()%>%
   mutate(Banks = fct_reorder(Banks, Total1)) %>%
-  ggplot(aes(x=Banks,y=Total1/1000))+
+  ggplot(aes(x=Banks,y=Total1))+
   ylab("Thousands of HTG")+
   geom_bar(stat = "identity",fill="orangered")+
   coord_flip()+
-  geom_text(aes(label=round(Total1/1000)),hjust=-0.1)+
+  geom_text(aes(label=round(Total1)),hjust=-0.1)+
   theme(text = element_text(size=10)) +
   ggtitle(paste(input$indicators, "by bank",sep=" "),
           subtitle = paste("quarterly ended on",substr(input$dates_value,1,7),sep =" "))+
@@ -402,7 +521,7 @@ renderValueBox(
 ```{r}
 renderValueBox(
    
-  valueBox(paste(round(as.numeric(df_variables$Liquid.asset[input$dates_value]/df_variables$Asset[input$dates_value]),digits = 3)*100,"%"),color="blue", icon = "fa-usd")
+  valueBox(paste(round(as.numeric(df_variables$`Liquid asset`[input$dates_value]/df_variables$Asset[input$dates_value]),digits = 3)*100,"%"),color="blue", icon = "fa-usd")
   
 )
 
@@ -413,7 +532,7 @@ renderValueBox(
 ```{r}
 renderValueBox(
    
-  valueBox(paste(round(as.numeric(df_variables$Loan.portfolio[input$dates_value]/df_variables$Asset[input$dates_value]),digits = 3)*100,"%"),color="orange", icon = "fa-credit-card")
+  valueBox(paste(round(as.numeric(df_variables$`Loan portfolio`[input$dates_value]/df_variables$Asset[input$dates_value]),digits = 3)*100,"%"),color="orange", icon = "fa-credit-card")
   
 )
 
@@ -437,7 +556,7 @@ renderValueBox(
 
 renderValueBox(
    
-  valueBox(paste(round(as.numeric(df_variables$Deposit.in.US.converted.in.HTG[input$dates_value]/df_variables$Asset[input$dates_value]),digits = 3)*100,"%"),color="maroon", icon = "fa-piggy-bank")
+  valueBox(paste(round(as.numeric(df_variables$`Deposit in US converted in HTG`[input$dates_value]/df_variables$Asset[input$dates_value]),digits = 3)*100,"%"),color="maroon", icon = "fa-piggy-bank")
   
 )
 
